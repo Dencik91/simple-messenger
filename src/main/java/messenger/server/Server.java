@@ -56,6 +56,12 @@ public class Server {
     }
 
     public static void sendMessage(Message message) {
+        if (!users.contains(message.getReceiver())) {
+            System.err.println("User "+message.getReceiver()+" don't exist");
+            return;
+        } else {
+
+        }
 
     }
 }
