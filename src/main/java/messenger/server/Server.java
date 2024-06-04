@@ -29,7 +29,7 @@ public class Server {
             Socket clientSocket = serverSocket.accept();
             ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
             messages.add((Message)ois.readObject());
-
+            if (messages != null) determineHeader(messages.getLast());
             users.forEach(System.out::println);
             messages.forEach(System.out::println);
 
