@@ -1,19 +1,26 @@
 package messenger.entities;
 
 import java.io.Serializable;
+import java.net.Socket;
 import java.util.Objects;
 
 public class User implements Serializable {
     private String name;
+    private Socket socket;
 
     public User () {}
 
-    public User(String name) {
+    public User(String name, Socket socket) {
         this.name = name;
+        this.socket = socket;
     }
 
     public String getName() {
         return name;
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 
     @Override

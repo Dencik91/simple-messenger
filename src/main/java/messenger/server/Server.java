@@ -7,61 +7,82 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
+import java.util.logging.Logger;
 
 public class Server {
-    // Initiate pseudo DB for active users and messages
-    private static List<Message> messages = new ArrayList<>();
+    private static Logger logger = Logger.getLogger(Server.class.getName());
+    private static boolean exit = false;
     private static Set<User> users = new HashSet<>();
-    private static boolean exit = true;
-    private static int serverPort = 10001;
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        // Initiate pseudo DB for active users and messages
-        System.out.println("Server started on port: " + serverPort);
-        // create server connection
-        ServerSocket serverSocket = new ServerSocket(serverPort);
-        // Instantiate main hearing cycle
-        while(exit) {
-            Socket clientSocket = serverSocket.accept();
-            ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
-            messages.add((Message)ois.readObject());
-            if (messages != null) determineHeader(messages.getLast());
-            users.forEach(System.out::println);
-            messages.forEach(System.out::println);
+    public void startServer() throws IOException {
 
-        }
+        Thread serverThread = new Thread(new ServerListener());
+        serverThread.start();
 
-        serverSocket.close();
-    }
-
-    public static void determineHeader(Message message) {
-        switch (message.getType().toLowerCase()) {
-            case "adding":
-                addUser(message.getSender());
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Type 'exit' to stop the server.");
+        String command;
+        while (scanner.hasNextLine()) {
+            command = scanner.nextLine();
+            if (command.equalsIgnoreCase("exit")) {
+                exit = true;
+                try {
+                    serverThread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Server Stopped");
                 break;
-            case "send":
-                sendMessage(message);
-                break;
-            default:
-                System.err.println("Invalid Type");
+            }
+        }
+
+
+
+    }
+
+    // Create new thread for each socket
+    static class ClientHandler extends Thread {
+        private Socket clientSocket;
+
+        public ClientHandler(Socket clientSocket) {
+            this.clientSocket = clientSocket;
+        }
+
+        public void run() {
+            try (ObjectInputStream ois =
+                         new ObjectInputStream(clientSocket.getInputStream())) {
+                Message message = (Message) ois.readObject();
+                users.add(new User(message.getSender().getName(), clientSocket));
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
-    public static void addUser(User user) {
-        users.add(user);
-    }
-
-    public static void sendMessage(Message message) {
-        if (!users.contains(message.getReceiver())) {
-            System.err.println("User "+message.getReceiver()+" don't exist");
-            return;
-        } else {
-
+    // Continuously listen for new connection
+    static class ServerListener implements Runnable {
+        @Override
+        public void run() {
+            try (ServerSocket serverSocket = new ServerSocket(10001)) {
+                logger.info("Server is running on port 10000");
+                while (!exit) {
+                    Socket clientSocket = serverSocket.accept();
+                    logger.info("New Client Add");
+                    new ClientHandler(clientSocket).start();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
-
     }
 }
+
